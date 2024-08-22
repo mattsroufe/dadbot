@@ -1,4 +1,7 @@
 __pycache__/
+launch/log/*
+launch/build/*
+launch/install/*
 build/
 install/
 frontend/node_modules/
