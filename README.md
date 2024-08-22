@@ -1,4 +1,6 @@
-# daddy_robot
+# dadbot
+
+![](https://github.com/mattsroufe/dadbot/blob/master/IMG_2526.jpeg)
 
 ## Demo video
 
