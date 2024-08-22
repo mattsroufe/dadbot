@@ -17,6 +17,11 @@ def generate_launch_description():
         #    executable='yahboom_g1_teleop',
         # ),
         Node(
+            package='dadbot',
+            name='tank_control',
+            executable='tank_control',
+        ),
+        Node(
             package='v4l2_camera',
             executable='v4l2_camera_node',
             name='pan_tilt_camera',

@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'bringup = dadbot.bringup:main',
             'yahboom_g1_teleop = dadbot.yahboom_g1_teleop:main',
+            'tank_control = dadbot.tank_control:main',
         ],
     },
 )
