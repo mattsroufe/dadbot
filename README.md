@@ -2,6 +2,8 @@
 
 ![](https://github.com/mattsroufe/dadbot/blob/master/IMG_2526.jpeg)
 
+![](https://github.com/mattsroufe/dadbot/blob/master/screenshot.png)
+
 ## Demo video
 
 https://youtu.be/T0yaw4qGdxE
