@@ -11,10 +11,10 @@ https://youtu.be/T0yaw4qGdxE
 ## Run on raspberry pi
 
 ```
-source /opt/ros/foxy/setup.bash
-cd daddy_robot
+source /opt/ros/humble/setup.bash
+cd ros2_ws
 . install/setup.bash
-ros2 run daddy_robot daddy_robot_node
+ros2 launch dadbot bringup.launch.py
 ```
 
 ## Launch on boot
