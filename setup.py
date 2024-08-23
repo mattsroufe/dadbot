@@ -27,6 +27,7 @@ setup(
             'bringup = dadbot.bringup:main',
             'yahboom_g1_teleop = dadbot.yahboom_g1_teleop:main',
             'tank_control = dadbot.tank_control:main',
+            'servo_controller = dadbot.servo_controller:main',
         ],
     },
 )

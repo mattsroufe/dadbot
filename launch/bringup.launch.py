@@ -18,6 +18,14 @@ def generate_launch_description():
         # ),
         Node(
             package='dadbot',
+            name='servo_controller',
+            executable='servo_controller',
+            remappings=[
+                ('/cmd_vel', '/servo/cmd_vel'),
+            ]
+        ),
+        Node(
+            package='dadbot',
             name='tank_control',
             executable='tank_control',
         ),
