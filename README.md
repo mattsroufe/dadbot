@@ -17,19 +17,22 @@ cd ros2_ws
 ros2 launch dadbot bringup.launch.py
 ```
 
-## Launch on boot
+## Netwoking
 
-`crontab -e`
+Ensure Avahi is installed and running:
+```
+sudo systemctl status avahi-daemon
+```
+If not, either start the service using `sudo systemctl start avahi-daemon` or
+install it with `sudo apt-get install avahi-daemon avahi-utils`
 
-Add a new entry in the file:
+This allows you to connect using your robot's hostname on you local network like this:
+```
+ssh mattsroufe@dadbot2.local
+```
+And you don't need to worry about dynamic ip addresses changing on your network.
 
-`@reboot python3 /home/pi/daddy_robot/server.py`
-
-Make sure the file is executable:
-
-`sudo chmod a+x /home/pi/daddy_robot/server.py`
-
-## raspiberry pi setup
+## Raspiberry pi setup
 
 `sudo vim /boot/firmware/config.txt`
 

@@ -30,18 +30,18 @@ def generate_launch_description():
             executable='tank_control',
         ),
         Node(
-            package='v4l2_camera',
-            executable='v4l2_camera_node',
+            package='dadbot',
+            executable='webcam_pub',
             name='pan_tilt_camera',
             parameters=[config],
         ),
         Node(
-            package='v4l2_camera',
+            package='dadbot',
+            executable='webcam_pub',
             name='fisheye_camera',
-            executable='v4l2_camera_node',
             parameters=[config],
             remappings=[
-                ('/image_raw', '/fisheye_image_raw'),
+                # ('/image_raw', '/fisheye_image_raw'),
                 ('/image_raw/compressed', '/fisheye_image_raw/compressed'),
             ]
         ),

@@ -47,13 +47,14 @@ class ServoController(Node):
         self.get_logger().info(f'{msg.angular.z}')
 
         movementAmount = 1
+        yMovementAmount = 2
 
         if msg.linear.x > 0:
-            self.tiltPosition = max(MinPosition, min(self.tiltPosition + movementAmount, MaxPosition))
+            self.tiltPosition = max(MinPosition, min(self.tiltPosition - yMovementAmount, MaxPosition))
             pulse_width = (500 + (self.tiltPosition * 2000 / 180))  # Convert angle to pulse width
             pi.set_servo_pulsewidth(ServoUpDownPin, pulse_width)
         elif msg.linear.x < 0:
-            self.tiltPosition = max(MinPosition, min(self.tiltPosition - movementAmount, MaxPosition))
+            self.tiltPosition = max(MinPosition, min(self.tiltPosition + yMovementAmount, MaxPosition))
             pulse_width = (500 + (self.tiltPosition * 2000 / 180))  # Convert angle to pulse width
             pi.set_servo_pulsewidth(ServoUpDownPin, pulse_width)
 
