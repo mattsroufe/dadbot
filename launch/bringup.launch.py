@@ -45,9 +45,9 @@ def generate_launch_description():
                 ('/image_raw/compressed', '/fisheye_image_raw/compressed'),
             ]
         ),
-        Node(
-            package='foxglove_bridge',
-            name='foxglove_bridge',
-            executable='foxglove_bridge',
-        ),
+        # Node(
+        #    package='foxglove_bridge',
+        #    name='foxglove_bridge',
+        #    executable='foxglove_bridge',
+        #),
     ])
