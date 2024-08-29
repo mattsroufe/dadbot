@@ -8,7 +8,7 @@ pan_tilt_camera:
 
 fisheye_camera:
   ros__parameters:
-    video_device: 1
+    video_device: 2
     # time_per_frame: [1, 30] # Set the desired FPS here
     # image_size: [640, 480]
     # output_encoding: "yuv422_yuy2"

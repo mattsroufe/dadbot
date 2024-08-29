@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 import cv2
 from cv_bridge import CvBridge
 import numpy as np
@@ -24,7 +24,8 @@ class ImagePublisher(Node):
     self.get_logger().info(f'video_device: {video_device}')
     self.get_logger().info(f'frame_rate: {frame_rate}')
 
-    self.publisher_ = self.create_publisher(CompressedImage, 'image_raw/compressed', 10)
+    self.raw_publisher_ = self.create_publisher(Image, '/image_raw', frame_rate)
+    self.compressed_publisher_ = self.create_publisher(CompressedImage, '/image_raw/compressed', frame_rate)
     fps = frame_rate
     timer_period = 1/fps
     self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -39,6 +40,7 @@ class ImagePublisher(Node):
         height = int(frame.shape[0] * scale_percent / 100)
         dim = (width, height)
         resized = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
+        self.raw_publisher_.publish(self.br.cv2_to_imgmsg(resized))
         success, buffer = cv2.imencode('.jpg', resized)
 
         if not success:
@@ -50,8 +52,7 @@ class ImagePublisher(Node):
         msg.format = 'jpeg'
         msg.data = np.array(buffer).tobytes()
 
-        self.publisher_.publish(msg)
-        # self.publisher_.publish(self.br.cv2_to_imgmsg(resized))
+        self.compressed_publisher_.publish(msg)
 
 def main(args=None):
   rclpy.init(args=args)

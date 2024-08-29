@@ -29,6 +29,7 @@ setup(
             'tank_control = dadbot.tank_control:main',
             'servo_controller = dadbot.servo_controller:main',
             'webcam_pub = dadbot.webcam_pub:main',
+            'object_detection = dadbot.object_detection:main',
         ],
     },
 )

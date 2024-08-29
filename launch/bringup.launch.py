@@ -16,24 +16,24 @@ def generate_launch_description():
         #    name='yahboom_g1_teleop',
         #    executable='yahboom_g1_teleop',
         # ),
-        Node(
-            package='dadbot',
-            name='servo_controller',
-            executable='servo_controller',
-            remappings=[
-                ('/cmd_vel', '/servo/cmd_vel'),
-            ]
-        ),
-        Node(
-            package='dadbot',
-            name='tank_control',
-            executable='tank_control',
-        ),
+        # Node(
+        #    package='dadbot',
+        #    name='servo_controller',
+        #    executable='servo_controller',
+        #    remappings=[
+        #        ('/cmd_vel', '/servo/cmd_vel'),
+        #    ]
+        #),
+        #Node(
+        #    package='dadbot',
+        #    name='tank_control',
+        #    executable='tank_control',
+        #),
         Node(
             package='dadbot',
             executable='webcam_pub',
             name='pan_tilt_camera',
-            parameters=[config],
+            parameters=[config]
         ),
         Node(
             package='dadbot',
@@ -41,13 +41,28 @@ def generate_launch_description():
             name='fisheye_camera',
             parameters=[config],
             remappings=[
-                # ('/image_raw', '/fisheye_image_raw'),
+                ('/image_raw', '/fisheye_image_raw'),
                 ('/image_raw/compressed', '/fisheye_image_raw/compressed'),
             ]
         ),
-        # Node(
-        #    package='foxglove_bridge',
-        #    name='foxglove_bridge',
-        #    executable='foxglove_bridge',
-        #),
+        Node(
+            package='dadbot',
+            name='object_detection',
+            executable='object_detection',
+        ),
+        Node(
+            package='rplidar_ros',
+            name='rplidar_node',
+            executable='rplidar_node',
+            parameters=[{
+                'channel_type': 'serial',
+                'serial_port': '/dev/ttyUSB1',
+                'serial_baudrate': 115200,
+                'frame_id': 'laser',
+                'inverted': False,
+                'angle_compensate': True,
+                'scan_mode': 'Express',
+            }],
+            output='screen'
+        )
     ])
