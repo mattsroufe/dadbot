@@ -2,10 +2,8 @@ import os
 import rclpy
 import numpy as np
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
 import cv2
-from message_filters import ApproximateTimeSynchronizer, Subscriber
 from cv_bridge import CvBridge
 
 from pycoral.adapters.common import input_size
@@ -14,29 +12,11 @@ from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
 from pycoral.utils.edgetpu import run_inference
 
-class ObjectDetection(Node):
+class FisheyeObjectDetection(Node):
   def __init__(self):
     super().__init__('object_detection')
-    self.subscription1 = Subscriber(self, Image, '/image_raw')
-    self.subscription2 = Subscriber(self, Image, '/fisheye_image_raw')
-
-    # Synchronizer for the image topics
-    self.sync = ApproximateTimeSynchronizer([self.subscription1, self.subscription2], 10, 0.1)
-    self.sync.registerCallback(self.image_callback)
-
-    # Publisher for the combined image
-    # self.image_pub = self.create_publisher(Image, 'combined_image_topic', 10)
-
-    # Define a QoS profile with best_effort reliability
-    qos_profile = QoSProfile(
-        reliability=ReliabilityPolicy.BEST_EFFORT,
-        history=rclpy.qos.HistoryPolicy.KEEP_LAST,
-        depth=5
-    )
-
-    self.publisher1 = self.create_publisher(CompressedImage, '/object_detection_image', qos_profile)
-    self.publisher2 = self.create_publisher(CompressedImage, '/fisheye_object_detection_image', qos_profile)
-
+    self.subscription = self.create_subscription(Image, '/fisheye_image_raw', self.listener_callback, 10)
+    self.publisher_ = self.create_publisher(CompressedImage, '/fisheye_object_detection_image', 10)
     self.br = CvBridge()
     default_model_dir = '/home/mattsroufe/coral/pycoral/test_data/'
     default_model = 'ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite'
@@ -49,17 +29,6 @@ class ObjectDetection(Node):
     self.top_k = 3
     self.i = 0
 
-  def image_callback(self, image_msg1, image_msg2):
-      compressed1 = self.listener_callback(image_msg1)
-      compressed2 = self.listener_callback(image_msg2)
-
-      self.publisher1.publish(compressed1)
-      self.publisher2.publish(compressed2)
-      # self.publisher.publish(self.br.cv2_to_imgmsg(cv2_im, encoding='rgb8'))
-      # print('received ' + str(self.i))
-      # print(objs)
-      self.i = self.i + 1
-      # cv2.waitKey(1)
 
   def listener_callback(self, data):
       frame = self.br.imgmsg_to_cv2(data)
@@ -89,11 +58,17 @@ class ObjectDetection(Node):
       msg.header.stamp = self.get_clock().now().to_msg()
       msg.format = 'jpeg'
       msg.data = np.array(buffer).tobytes()
-      return msg
+
+      self.publisher_.publish(msg)
+      # self.publisher_.publish(self.br.cv2_to_imgmsg(cv2_im, encoding='rgb8'))
+      print('received ' + str(self.i))
+      print(objs)
+      self.i = self.i + 1
+      cv2.waitKey(1)
 
 def main(args=None):
     rclpy.init(args=args)
-    object_detection = ObjectDetection()
+    object_detection = FisheyeObjectDetection()
     rclpy.spin(object_detection)
     object_detection.destroy_node()
     rclpy.shutdown()

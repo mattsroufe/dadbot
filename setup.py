@@ -30,6 +30,8 @@ setup(
             'servo_controller = dadbot.servo_controller:main',
             'webcam_pub = dadbot.webcam_pub:main',
             'object_detection = dadbot.object_detection:main',
+            'fisheye_object_detection = dadbot.fisheye_object_detection:main',
+            'image_viewer_node = dadbot.image_viewer_node:main'
         ],
     },
 )

@@ -16,14 +16,14 @@ def generate_launch_description():
         #    name='yahboom_g1_teleop',
         #    executable='yahboom_g1_teleop',
         # ),
-        # Node(
-        #    package='dadbot',
-        #    name='servo_controller',
-        #    executable='servo_controller',
-        #    remappings=[
-        #        ('/cmd_vel', '/servo/cmd_vel'),
-        #    ]
-        #),
+        Node(
+            package='dadbot',
+            name='servo_controller',
+            executable='servo_controller',
+            remappings=[
+                ('/cmd_vel', '/servo/cmd_vel'),
+            ]
+        ),
         #Node(
         #    package='dadbot',
         #    name='tank_control',
@@ -50,6 +50,11 @@ def generate_launch_description():
             name='object_detection',
             executable='object_detection',
         ),
+        # Node(
+        #    package='dadbot',
+        #    name='fisheye_object_detection',
+        #    executable='fisheye_object_detection',
+        # ),
         Node(
             package='rplidar_ros',
             name='rplidar_node',

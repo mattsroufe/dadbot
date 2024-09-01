@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
 import cv2
 from cv_bridge import CvBridge
@@ -10,6 +11,13 @@ class ImagePublisher(Node):
     super().__init__('image_publisher')
 
     global scale_percent
+
+    # Define a QoS profile with best_effort reliability
+    qos_profile = QoSProfile(
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        history=rclpy.qos.HistoryPolicy.KEEP_LAST,
+        depth=5
+    )
 
     # Declare parameters
     self.declare_parameter('video_device', 0)
@@ -25,7 +33,7 @@ class ImagePublisher(Node):
     self.get_logger().info(f'frame_rate: {frame_rate}')
 
     self.raw_publisher_ = self.create_publisher(Image, '/image_raw', frame_rate)
-    self.compressed_publisher_ = self.create_publisher(CompressedImage, '/image_raw/compressed', frame_rate)
+    self.compressed_publisher_ = self.create_publisher(CompressedImage, '/image_raw/compressed', qos_profile)
     fps = frame_rate
     timer_period = 1/fps
     self.timer = self.create_timer(timer_period, self.timer_callback)
