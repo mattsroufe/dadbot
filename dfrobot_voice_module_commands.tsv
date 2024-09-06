@@ -1,8 +1,10 @@
+Command Words/Wake-up Words & ID Table
+
 Wake-up words	ID
 Wake-up words for learning	1
 Hello robot	2
 
-Commands for learning	ID
+Commands for learning  ID
 The first custom command  5
 The second custom command  6
 The third custom command  7
