@@ -6,15 +6,15 @@ import signal
 async def stream_video(video_index, camera_id, server_uri, stop_event):
     print("Initializing video capture...")
     cap = cv2.VideoCapture(video_index)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
 
     if not cap.isOpened():
         print(f"Error: Unable to open video source {video_index}. Exiting.")
         return
 
     try:
-        async with websockets.connect(server_uri) as websocket:
+        async with websockets.connect(server_uri, compression="deflate") as websocket:
             print(f"Connected to WebSocket server at {server_uri}.")
             while not stop_event.is_set():
                 # Capture a frame
@@ -25,7 +25,7 @@ async def stream_video(video_index, camera_id, server_uri, stop_event):
                     continue
 
                 # Encode the frame as JPEG
-                success, buffer = cv2.imencode('.jpg', frame)
+                success, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 if not success:
                     print("Error: Frame encoding failed.")
                     break
@@ -39,7 +39,7 @@ async def stream_video(video_index, camera_id, server_uri, stop_event):
                     break
 
                 # Simulate ~30 FPS
-                await asyncio.sleep(1 / 30)
+                await asyncio.sleep(1 / 60)
 
     except Exception as e:
         print(f"Error: {e}")
