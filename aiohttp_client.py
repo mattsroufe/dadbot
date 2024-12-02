@@ -75,3 +75,5 @@ if __name__ == "__main__":
         asyncio.run(main(args.video_index, args.camera_id, args.server_uri))
     except KeyboardInterrupt:
         print("\nProgram stopped by user.")
+        stop_event = asyncio.Event()
+        stop_event.set()
