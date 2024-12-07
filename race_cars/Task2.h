@@ -1,15 +1,17 @@
 #ifndef TASK2_H
 #define TASK2_H
 
-#include <Arduino.h>
+#include "BaseTask.h"
 
-class Task2 {
+class Task2 : public BaseTask {
 public:
-    void setup();
-    void loop();
+    Task2() : BaseTask("Task2", 1000, 1, 1) {}
 
-private:
-    TaskHandle_t taskHandle;
+protected:
+    void loop() override {
+        Serial.println("Task2 loop");
+        vTaskDelay(2000 / portTICK_PERIOD_MS);  // Delay for 2 seconds
+    }
 };
 
 #endif
