@@ -1,12 +1,33 @@
 #include <Bluepad32.h>
 #include <ESP32Servo.h>  // ESP32Servo library for servo control
 
-
 // Motor and Servo setup
 const int motorPin1 = 12;  // Motor control pin 1
-const int motorPin2 = 13; // Motor control pin 2
-const int servoPin = 14; // Motor control pin 2
-int motorSpeed = 0; // Motor speed (controlled by left joystick Y-axis)
+const int motorPin2 = 13;  // Motor control pin 2
+const int servoPin = 14;   // Servo control pin
+
+
+// Define dead zone threshold (adjust as needed)
+const int MOTOR_DEAD_ZONE = 10;  // Threshold for motor to ignore small values
+const int SERVO_DEAD_ZONE = 10;  // Threshold for servo to ignore small values
+
+// Smoothing factor (higher values make the smoothing slower)
+const float MOTOR_SMOOTHING_FACTOR = 0.4;  // Smoothing factor for motor
+const float SERVO_SMOOTHING_FACTOR = 0.6;  // Smoothing factor for servo
+
+// Variables to store smoothed values
+int smoothedMotorSpeed = 0;
+int smoothedServoPos = 90;
+int motorSpeed = 0;        // Motor speed (controlled by left joystick Y-axis)
+int lastMotorSpeed = 0;    // To store last motor speed for smoothing
+int lastServoPos = 90;     // To store last servo position for smoothing
+int motorSpeedSmoothFactor = 5; // The factor to control smoothing speed
+int servoPosSmoothFactor = 5;  // The factor to control servo smoothing speed
+
+int deadZone = 50;  // Configurable dead zone for joystick input
+
+const int RIGHT_STEERING_OFFSET = 50;
+const int LEFT_STEERING_OFFSET = 20;
 
 // Create an instance of the ESP32Servo class
 Servo myServo;
@@ -141,18 +162,26 @@ void controlMotor(ControllerPtr ctl) {
     // Map the joystick Y-axis to a motor speed range (0 to 255 for forward)
     int throttle = map(ctl->axisY(), -511, 511, -255, 255);
 
+    // Apply dead zone to the throttle value
+    if (abs(throttle) < MOTOR_DEAD_ZONE) {
+        throttle = 0;  // Ignore small values within dead zone
+    }
+
+    // Smooth the motor speed
+    smoothedMotorSpeed = smoothedMotorSpeed + MOTOR_SMOOTHING_FACTOR * (throttle - smoothedMotorSpeed);
+
     Serial.print(" - Throttle: ");
-    Serial.println(throttle);
+    Serial.println(smoothedMotorSpeed);
 
     // Motor control using two pins for direction
-    if (throttle > 0) {
+    if (smoothedMotorSpeed > 0) {
         // Forward direction
-        analogWrite(motorPin1, throttle);
+        analogWrite(motorPin1, smoothedMotorSpeed);
         analogWrite(motorPin2, 0);
-    } else if (throttle < 0) {
+    } else if (smoothedMotorSpeed < 0) {
         // Reverse direction
         analogWrite(motorPin1, 0);
-        analogWrite(motorPin2, -throttle);
+        analogWrite(motorPin2, -smoothedMotorSpeed);
     } else {
         // Stop motor
         analogWrite(motorPin1, 0);
@@ -165,10 +194,24 @@ void controlServo(ControllerPtr ctl) {
     // Map joystick X-axis to servo range (0-180)
     int servoPos = map(ctl->axisRX(), -511, 511, 0, 180);
 
-    Serial.print(" - Servo position: ");
-    Serial.println(servoPos);
+    // Apply dead zone to the servo position (ignore small values near neutral)
+    if (abs(servoPos - 90) < SERVO_DEAD_ZONE) {
+        servoPos = 90;  // Ignore small values near the center (neutral position)
+    }
 
-    myServo.write(servoPos); // Set servo position based on joystick X-axis
+    // Smooth the servo position
+    smoothedServoPos = smoothedServoPos + SERVO_SMOOTHING_FACTOR * (servoPos - smoothedServoPos);
+
+    // Ensure the servo position converges to 90 when near it
+    if (abs(smoothedServoPos - 90) < 5) {
+        smoothedServoPos = 90;  // Force it to return exactly to 90 if close enough
+    }
+
+    Serial.print(" - Servo position: ");
+    Serial.println(smoothedServoPos);
+
+    // Write the smoothed position to the servo
+    myServo.write(constrain(smoothedServoPos, 0 + LEFT_STEERING_OFFSET, 180 - RIGHT_STEERING_OFFSET));  // Constrain within car's steering range
 }
 
 void processGamepad(ControllerPtr ctl) {
@@ -339,5 +382,5 @@ void loop() {
     // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
 
     //     vTaskDelay(1);
-    delay(150);
+    delay(50);
 }
