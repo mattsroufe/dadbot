@@ -9,7 +9,7 @@ video_frames = {}
 # Window name for display
 WINDOW_NAME = "4 Streams Display"
 
-async def handle_camera_connection(websocket, path):
+async def handle_camera_connection(websocket):
     client_ip = websocket.remote_address[0]
     print(f"Connection from: {client_ip}")
 
@@ -22,6 +22,10 @@ async def handle_camera_connection(websocket, path):
 
                 # Store the latest frame for this client
                 video_frames[client_ip] = frame
+
+                # Example: Send a response back to the client
+                # response = f"Frame received from {client_ip}"
+                # await websocket.send(response)
             else:
                 print(f"Received non-binary message from {client_ip}: {message}")
     except websockets.exceptions.ConnectionClosed:
@@ -31,19 +35,27 @@ async def handle_camera_connection(websocket, path):
 async def display_frames():
     while True:
         # Prepare a black canvas to display 4 streams (2x2 grid)
-        canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+        canvas = np.zeros((960, 1280, 3), dtype=np.uint8)
 
         # Get frames from clients
-        frames = list(video_frames.values())
+        frames = list(video_frames.items())
 
         # Resize and arrange up to 4 frames in the canvas
-        for i, frame in enumerate(frames[:4]):
-            resized_frame = cv2.resize(frame, (320, 240))  # Resize to fit 2x2 grid
+        for i, (ip, frame) in enumerate(frames[:4]):
+            resized_frame = cv2.resize(frame, (640, 480))  # Resize to fit 2x2 grid
 
             # Calculate position in the grid
-            x_offset = (i % 2) * 320
-            y_offset = (i // 2) * 240
-            canvas[y_offset:y_offset+240, x_offset:x_offset+320] = resized_frame
+            x_offset = (i % 2) * 640
+            y_offset = (i // 2) * 480
+            canvas[y_offset:y_offset+480, x_offset:x_offset+640] = resized_frame
+
+            # Add the IP address text to the frame
+            text_position = (x_offset + 10, y_offset + 30)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.7
+            font_color = (255, 255, 255)
+            thickness = 2
+            cv2.putText(canvas, ip, text_position, font, font_scale, font_color, thickness)
 
         # Show the canvas
         cv2.imshow(WINDOW_NAME, canvas)
