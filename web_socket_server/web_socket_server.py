@@ -1,3 +1,5 @@
+import aiohttp
+from aiohttp import web
 import asyncio
 import websockets
 import cv2
@@ -8,6 +10,25 @@ video_frames = {}
 
 # Window name for display
 WINDOW_NAME = "4 Streams Display"
+
+async def index(request):
+    return web.Response(text=open('index.html').read(), content_type='text/html')
+
+async def websocket_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    # Handle incoming messages
+    async for msg in ws:
+        if msg.type == aiohttp.WSMsgType.TEXT:
+            if msg.data == 'close':
+                await ws.close()
+            else:
+                await ws.send_str(f"Message received: {msg.data}")
+        elif msg.type == aiohttp.WSMsgType.ERROR:
+            print(f"WebSocket connection closed with exception {ws.exception()}")
+
+    return ws
 
 async def handle_camera_connection(websocket):
     client_ip = websocket.remote_address[0]
@@ -77,8 +98,14 @@ async def main():
         display_frames()
     )
 
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    finally:
-        cv2.destroyAllWindows()
+app = web.Application()
+app.router.add_get('/', index)
+app.router.add_get('/ws', websocket_handler)
+
+web.run_app(app, host='localhost', port=8080)
+
+# if __name__ == "__main__":
+#    try:
+#        asyncio.run(main())
+#    finally:
+#        cv2.destroyAllWindows()
