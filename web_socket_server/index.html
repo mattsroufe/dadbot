@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aiohttp WebSocket Example</title>
+</head>
+<body>
+    <h1>Aiohttp WebSocket Example</h1>
+    <textarea id="messages" rows="10" cols="30" readonly></textarea><br><br>
+    <input type="text" id="input" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8080/ws');
+        const messages = document.getElementById('messages');
+        const input = document.getElementById('input');
+
+        ws.onmessage = function(event) {
+            messages.value += event.data + '\n';
+        };
+
+        function sendMessage() {
+            const message = input.value;
+            if (message) {
+                ws.send(message);
+                input.value = '';
+            }
+        }
+
+        ws.onclose = function() {
+            messages.value += 'WebSocket connection closed\n';
+        };
+    </script>
+</body>
+</html>
