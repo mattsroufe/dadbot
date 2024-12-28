@@ -1,58 +1,72 @@
 import asyncio
 import websockets
-import numpy as np
 import cv2
-import io
+import numpy as np
 
-# This will store the accumulated image data
-image_data = bytearray()
+# Dictionary to store video frames by client IP
+video_frames = {}
 
-async def handle_client(websocket):
-    global image_data
-    frame_number = 0
-    print("Client connected")
-    
+# Window name for display
+WINDOW_NAME = "4 Streams Display"
+
+async def handle_camera_connection(websocket, path):
+    client_ip = websocket.remote_address[0]
+    print(f"Connection from: {client_ip}")
+
     try:
-        while True:
-            # Receive binary data (image chunk)
-            chunk = await websocket.recv()
-            await websocket.send("capture " + str(frame_number))  # Send the "capture" message
-            frame_number += 1
-            # print(chunk);
+        async for message in websocket:
+            if isinstance(message, bytes):  # Binary frame data
+                # Decode the received frame
+                frame_array = np.frombuffer(message, dtype=np.uint8)
+                frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
 
-            # Append the received chunk to the image data buffer
-            image_data.extend(chunk)
+                # Store the latest frame for this client
+                video_frames[client_ip] = frame
+            else:
+                print(f"Received non-binary message from {client_ip}: {message}")
+    except websockets.exceptions.ConnectionClosed:
+        print(f"Connection closed for {client_ip}")
+        video_frames.pop(client_ip, None)
 
-            # Check if we have received enough data to form a complete image
-            if len(image_data) > 0:
-                # Try to decode the image if enough data is present
-                nparr = np.frombuffer(image_data, np.uint8)
-                image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+async def display_frames():
+    while True:
+        # Prepare a black canvas to display 4 streams (2x2 grid)
+        canvas = np.zeros((480, 640, 3), dtype=np.uint8)
 
-                if image is not None:
-                    # Show the image
-                    cv2.imshow("Received Image", image)
-                    
-                    # Wait for 1 ms and check if the user presses the 'q' key to exit
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+        # Get frames from clients
+        frames = list(video_frames.values())
 
-                    # Clear the image_data buffer after displaying the image
-                    image_data = bytearray()
+        # Resize and arrange up to 4 frames in the canvas
+        for i, frame in enumerate(frames[:4]):
+            resized_frame = cv2.resize(frame, (320, 240))  # Resize to fit 2x2 grid
 
-    except websockets.exceptions.ConnectionClosed as e:
-        print(f"Connection closed: {e}")
-    finally:
-        cv2.destroyAllWindows()
+            # Calculate position in the grid
+            x_offset = (i % 2) * 320
+            y_offset = (i // 2) * 240
+            canvas[y_offset:y_offset+240, x_offset:x_offset+320] = resized_frame
+
+        # Show the canvas
+        cv2.imshow(WINDOW_NAME, canvas)
+
+        # Exit if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        await asyncio.sleep(0.03)  # Approx. 30 FPS
 
 async def main():
     # Start the WebSocket server
-    server = await websockets.serve(handle_client, "0.0.0.0", 8080)
-    print("WebSocket server started at ws://0.0.0.0:8080")
-    
-    # Keep the server running
-    await server.wait_closed()
+    websocket_server = websockets.serve(handle_camera_connection, "0.0.0.0", 8080)
+    print("WebSocket server running on ws://0.0.0.0:8080")
 
-# Start the server
-asyncio.run(main())
+    # Run server and frame display concurrently
+    await asyncio.gather(
+        websocket_server,
+        display_frames()
+    )
 
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    finally:
+        cv2.destroyAllWindows()
