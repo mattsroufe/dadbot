@@ -4,12 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aiohttp WebSocket Example</title>
+    <style>
+    </style>
 </head>
 <body>
-    <h1>Aiohttp WebSocket Example</h1>
-    <textarea id="messages" rows="10" cols="30" readonly></textarea><br><br>
-    <input type="text" id="input" placeholder="Type a message">
-    <button onclick="sendMessage()">Send</button>
+    <div style="display:flex; justify-content:space-between">
+      <h1>Posscart</h1>
+      <img src="http://localhost:8080/video" alt="Video Stream"></img>
+      <div>
+        <textarea id="messages" rows="10" cols="30" readonly></textarea><br><br>
+        <input type="text" id="input" placeholder="Type a message">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
 
     <script>
         const ws = new WebSocket('ws://localhost:8080/ws');

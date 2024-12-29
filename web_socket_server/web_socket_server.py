@@ -18,6 +18,8 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
 
+    client_ip = request.remote
+
     # Handle incoming messages
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
@@ -27,9 +29,8 @@ async def websocket_handler(request):
                 await ws.send_str(f"Message received: {msg.data}")
         elif msg.type == aiohttp.WSMsgType.BINARY:
             # Decode the received frame
-            frame_array = np.frombuffer(message, dtype=np.uint8)
+            frame_array = np.frombuffer(msg.data, dtype=np.uint8)
             frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-            print('received frame')
             # Store the latest frame for this client
             video_frames[client_ip] = frame
         elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -85,12 +86,12 @@ async def generate_frames():
             thickness = 2
             cv2.putText(canvas, ip, text_position, font, font_scale, font_color, thickness)
 
-            _, jpeg_frame = cv2.imencode('.jpg', resized_frame)
-            frame_data = jpeg_frame.tobytes()
+        _, jpeg_frame = cv2.imencode('.jpg', canvas)
+        frame_data = jpeg_frame.tobytes()
 
-            yield frame_data
+        yield frame_data
 
-            await asyncio.sleep(1/30)
+        await asyncio.sleep(1/30)
 
 async def stream_video(request):
     try:
@@ -152,7 +153,7 @@ async def display_frames():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-        await asyncio.sleep(0.03)  # Approx. 30 FPS
+        await asyncio.sleep(1)  # Approx. 30 FPS
 
 async def main():
     # Start the WebSocket server
@@ -166,13 +167,10 @@ async def main():
     )
 
 app = web.Application()
-app.router.add_get('/home', index)
+app.router.add_get('/', index)
 app.router.add_get('/video', stream_video)
-app.router.add_get('/', websocket_handler)
+app.router.add_get('/ws', websocket_handler)
 
 if __name__ == "__main__":
-    try:
-        web.run_app(app, host='localhost', port=8080)
-    except KeyboardInterrupt:
-        print("Server shutdown initiated")
+    web.run_app(app, host='0.0.0.0', port=8080)
 
