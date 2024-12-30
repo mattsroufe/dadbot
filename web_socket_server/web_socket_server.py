@@ -4,9 +4,12 @@ import asyncio
 import websockets
 import cv2
 import numpy as np
+import json
 
 # Dictionary to store video frames by client IP
 video_frames = {}
+control_commands = {}
+lock = asyncio.Lock()
 
 # Window name for display
 WINDOW_NAME = "4 Streams Display"
@@ -26,13 +29,20 @@ async def websocket_handler(request):
             if msg.data == 'close':
                 await ws.close()
             else:
-                await ws.send_str(f"Message received: {msg.data}")
+                # await ws.send_str(f"Message received: {msg.data}")
+                # print(f"Message received: {msg.data}")
+                control_commands[0] = json.loads(msg.data)
         elif msg.type == aiohttp.WSMsgType.BINARY:
             # Decode the received frame
             frame_array = np.frombuffer(msg.data, dtype=np.uint8)
             frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
             # Store the latest frame for this client
             video_frames[client_ip] = frame
+
+            # if client_ip in control_commands:
+            # command = control_commands[client_ip]
+            command = control_commands[0]
+            await ws.send_json(command)
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print(f"WebSocket connection closed with exception {ws.exception()}")
 

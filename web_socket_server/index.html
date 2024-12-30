@@ -41,8 +41,7 @@
         ws.onclose = function() {
             messages.value += 'WebSocket connection closed\n';
         };
-    </script>
-    <script>
+
         const gamepadInfoContainer = document.getElementById("gamepad-info");
         const gamepads = {};
 
@@ -55,11 +54,12 @@
             for (let i = 0; i < connectedGamepads.length; i++) {
                 const gamepad = connectedGamepads[i];
                 if (gamepad) {
-                    gamepadData[gamepad.index] = {
-                        id: gamepad.id,
-                        axes: gamepad.axes.slice(0, 3).map(a => a.toFixed(1)),
+                    gamepadData[gamepad.index] = // {
+                        // id: gamepad.id,
+                        // axes: gamepad.axes.slice(1, 2).map(a => a.toFixed(1)),
+                        gamepad.axes.slice(1, 3).map(a => a.toFixed(1));
                         // buttons: gamepad.buttons.map(button => button.pressed)
-                    };
+                    // };
                 }
             }
 
@@ -71,7 +71,9 @@
             //     },
             //     body: JSON.stringify(gamepadData)
             // });
-            // console.log(JSON.stringify(gamepadData))
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(gamepadData));
+            }
         }
 
         // Update the gamepad info displayed on the webpage
