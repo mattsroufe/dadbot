@@ -1,3 +1,4 @@
+import time
 import aiohttp
 from aiohttp import web
 import asyncio
@@ -9,7 +10,6 @@ import json
 # Dictionary to store video frames by client IP
 video_frames = {}
 control_commands = {}
-lock = asyncio.Lock()
 
 # Window name for display
 WINDOW_NAME = "4 Streams Display"
@@ -41,8 +41,11 @@ async def websocket_handler(request):
 
             # if client_ip in control_commands:
             # command = control_commands[client_ip]
-            command = control_commands[0]
-            await ws.send_json(command)
+            if 0 in control_commands:
+                commands = control_commands[0]
+                #   await ws.send_json(command)
+                if (len(commands) > 0):
+                    await ws.send_str(f"CONTROL:{commands[0][0]}:{commands[0][1]}")
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print(f"WebSocket connection closed with exception {ws.exception()}")
 
