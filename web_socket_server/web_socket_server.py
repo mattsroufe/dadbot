@@ -192,7 +192,7 @@ def main():
     # Serve static files (e.g., JS, CSS) from the 'static' directory
     app.router.add_static('/static', path='./static', name='static')
 
-    web.run_app(app, host='0.0.0.0', port=8080)
+    web.run_app(app, host='0.0.0.0', port=8000)
 
 if __name__ == "__main__":
     main()
