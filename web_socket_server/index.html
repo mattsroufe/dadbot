@@ -5,22 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aiohttp WebSocket Example</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .side-panels {
+            width: 20%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .panel {
+            flex: 1;
+            margin: 5px;
+            background-color: #ccc;
+            border-radius: 5px;
+        }
+
+        .video-section {
+            width: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+
+        .video-section img {
+            max-height: 100%;
+            max-width: 100%;
+	    object-fit: contain;
+        }
+
     </style>
 </head>
 <body>
-    <div style="display:flex; justify-content:space-between">
-      <div>
-        <h1>Posscart</h1>
-        <div id="gamepad-info"></div>
-      </div>
-      <img src="http://localhost:8080/video" alt="Video Stream"></img>
-      <div>
-        <textarea id="messages" rows="10" cols="30" readonly></textarea><br><br>
-        <input type="text" id="input" placeholder="Type a message">
-        <button onclick="sendMessage()">Send</button>
-      </div>
+    <div class="container">
+        <div class="side-panels">
+            <div id="gamepad-info" class="panel">Panel 1</div>
+            <div class="panel">Panel 2</div>
+        </div>
+        <div class="video-section">
+            <img src="http://localhost:8080/video" alt="Video Stream"></img>
+	    <!-- <video src="http://localhost:8000/video" autoplay muted loop></video> -->
+        </div>
+        <div class="side-panels">
+            <div class="panel">Panel 3</div>
+            <div class="panel">Panel 4</div>
+        </div>
     </div>
-
     <script src="./static/app.js"></script>
 </body>
 </html>
