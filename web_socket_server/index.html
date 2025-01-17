@@ -4,70 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aiohttp WebSocket Example</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body, html {
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, sans-serif;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        .side-panels {
-            width: 20%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .panel {
-            flex: 1;
-            margin: 5px;
-            background-color: #ccc;
-            border-radius: 5px;
-        }
-
-        .video-section {
-            width: 60%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #000;
-        }
-
-        .video-section img {
-            max-height: 100%;
-            max-width: 100%;
-	    object-fit: contain;
-        }
-
-    </style>
+    <link rel="stylesheet" href="static/app.css">
 </head>
 <body>
     <div class="container">
         <div class="side-panels">
-            <div id="gamepad-info" class="panel">Panel 1</div>
-            <div class="panel">Panel 2</div>
+            <div id="gamepad-info-0" class="panel">Gamepad 1</div>
+            <div id="gamepad-info-2" class="panel">Gamepad 3</div>
         </div>
         <div class="video-section">
             <img src="http://localhost:8080/video" alt="Video Stream"></img>
 	    <!-- <video src="http://localhost:8000/video" autoplay muted loop></video> -->
         </div>
         <div class="side-panels">
-            <div class="panel">Panel 3</div>
-            <div class="panel">Panel 4</div>
+            <div id="gamepad-info-1" class="panel">Gamepad 2</div>
+            <div id="gamepad-info-3" class="panel">Gamepad 4</div>
         </div>
     </div>
     <script src="./static/app.js"></script>

@@ -27,7 +27,8 @@ body, html {
 
 .panel {
     flex: 1;
-    margin: 5px;
+    margin: 8px;
+    padding: 12px;
     background-color: #ccc;
     border-radius: 5px;
 }
@@ -40,7 +41,8 @@ body, html {
     background-color: #000;
 }
 
-.video-section video {
-    height: 100%;
-    width: auto;
+.video-section img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
 }

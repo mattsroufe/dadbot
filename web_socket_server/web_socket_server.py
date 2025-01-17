@@ -9,10 +9,8 @@ import cv2
 import numpy as np
 import json
 
-# Dictionary to store video frames by client IP
-control_commands = {}
-
 frame_lock = asyncio.Lock()
+control_lock = asyncio.Lock()
 
 # Window name for display
 WINDOW_NAME = "4 Streams Display"
@@ -34,7 +32,9 @@ async def websocket_handler(request):
             else:
                 # await ws.send_str(f"Message received: {msg.data}")
                 # print(f"Message received: {msg.data}")
-                control_commands[0] = json.loads(msg.data)
+                async with control_lock:
+                    request.app['control_commands'].clear()
+                    request.app['control_commands'].extend(json.loads(msg.data))
         elif msg.type == aiohttp.WSMsgType.BINARY:
             # Decode the received frame
             frame_array = np.frombuffer(msg.data, dtype=np.uint8)
@@ -43,13 +43,16 @@ async def websocket_handler(request):
             async with frame_lock:
                 request.app['video_frames'][client_ip] = frame
 
-            # if client_ip in control_commands:
-            # command = control_commands[client_ip]
-            if 0 in control_commands:
-                commands = control_commands[0]
-                #   await ws.send_json(command)
-                if (len(commands) > 0):
-                    await ws.send_str(f"CONTROL:{commands[0][0]}:{commands[0][1]}")
+            ip_addresses = list(request.app['video_frames'].keys())
+            ip_idx = ip_addresses.index(client_ip)
+
+            try:
+                async with control_lock:
+                    command = request.app['control_commands'][ip_idx]
+                # print(f"CONTROL:{client_ip}:{command[0]}:{command[1]}")
+                await ws.send_str(f"CONTROL:{command[0]}:{command[1]}")
+            except IndexError:
+                print(f"Index {ip_idx} does not exist.")
         elif msg.type == aiohttp.WSMsgType.ERROR:
             print(f"WebSocket connection closed with exception {ws.exception()}")
 
@@ -186,6 +189,7 @@ def main():
 
     app = web.Application()
     app['video_frames'] = {}
+    app['control_commands'] = []
     app.router.add_get('/', index)
     app.router.add_get('/video', stream_video)
     app.router.add_get('/ws', websocket_handler)
