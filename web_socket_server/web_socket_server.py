@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import json
 from concurrent.futures import ProcessPoolExecutor
+from collections import deque
+from time import time
 
 WINDOW_NAME = "4 Streams Display"
 
@@ -30,7 +32,8 @@ async def websocket_handler(request):
             frame_array = np.frombuffer(msg.data, dtype=np.uint8)
             frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
             async with request.app['frame_lock']:
-                request.app['video_frames'][client_ip] = frame
+                frame_queue = request.app['video_frames'].setdefault(client_ip, deque(maxlen=30))
+                frame_queue.append((frame, time()))  # Store frame with timestamp
 
             try:
                 ip_idx = list(request.app['video_frames']).index(client_ip)
@@ -38,32 +41,56 @@ async def websocket_handler(request):
                     command = request.app['control_commands'][ip_idx]
                 await ws.send_str(f"CONTROL:{command[0]}:{command[1]}")
             except (IndexError, ValueError):
-                # logging.warning(f"No command available for index {ip_idx}")
                 pass
         elif msg.type == aiohttp.WSMsgType.ERROR:
             logging.error(f"WebSocket connection closed with exception {ws.exception()}")
 
     return ws
 
-def process_frame_canvas(frames):
+
+def process_frame_canvas(frame_queues):
     canvas = np.zeros((960, 1280, 3), dtype=np.uint8)
-    for i, (ip, frame) in enumerate(frames[:4]):
+
+    for i, (ip, frame_queue) in enumerate(frame_queues.items()):
+        if not frame_queue:
+            continue
+
+        frame, _ = frame_queue[-1]  # Use the most recent frame
         resized_frame = cv2.resize(frame, (640, 480))
         x_offset = (i % 2) * 640
         y_offset = (i // 2) * 480
         canvas[y_offset:y_offset+480, x_offset:x_offset+640] = resized_frame
-        cv2.putText(canvas, ip, (x_offset + 10, y_offset + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        # Calculate frame rate using timestamps
+        timestamps = [ts for _, ts in frame_queue]
+        frame_rate = None
+        if len(timestamps) > 1:
+            frame_rate = (len(timestamps) - 1) / (timestamps[-1] - timestamps[0])
+
+        text_position_ip = (x_offset + 10, y_offset + 30)
+        text_position_fps = (x_offset + 10, y_offset + 60)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        font_color = (255, 255, 255)
+        thickness = 2
+
+        cv2.putText(canvas, ip, text_position_ip, font, font_scale, font_color, thickness)
+        if frame_rate:
+            cv2.putText(canvas, f"FPS: {frame_rate:.2f}", text_position_fps, font, font_scale, font_color, thickness)
+
     return canvas
+
 
 async def generate_frames(request, pool):
     while True:
         async with request.app['frame_lock']:
-            frames = list(request.app['video_frames'].items())
-        if frames:
-            canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frames)
+            frame_queues = request.app['video_frames']
+        if frame_queues:
+            canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frame_queues)
             _, jpeg_frame = cv2.imencode('.jpg', canvas)
             yield jpeg_frame.tobytes()
         await asyncio.sleep(1/30)
+
 
 async def stream_video(request):
     try:
@@ -90,6 +117,7 @@ async def stream_video(request):
         logging.error(f"Streaming error: {e}")
         return web.Response(text=f"Error: {e}", status=500)
 
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
     app = web.Application()
@@ -103,11 +131,12 @@ def main():
     app.router.add_get('/video', stream_video)
     app.router.add_get('/ws', websocket_handler)
     app.router.add_static('/static', path='./static', name='static')
-    
+
     try:
         web.run_app(app, host='0.0.0.0', port=8080)
     finally:
         app['process_pool'].shutdown()
+
 
 if __name__ == "__main__":
     main()
