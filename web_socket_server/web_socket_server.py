@@ -89,7 +89,7 @@ async def generate_frames(request, pool):
             canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frame_queues)
             _, jpeg_frame = cv2.imencode('.jpg', canvas)
             yield jpeg_frame.tobytes()
-        await asyncio.sleep(1/30)
+        await asyncio.sleep(1/60)
 
 
 async def stream_video(request):
