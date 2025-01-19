@@ -1,5 +1,4 @@
 import logging
-import time
 import aiohttp
 from aiohttp import web
 import asyncio
@@ -12,7 +11,6 @@ from concurrent.futures import ProcessPoolExecutor
 frame_lock = asyncio.Lock()
 control_lock = asyncio.Lock()
 
-# Window name for display
 WINDOW_NAME = "4 Streams Display"
 
 async def index(request):
@@ -21,7 +19,6 @@ async def index(request):
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-
     client_ip = request.remote
 
     async for msg in ws:
@@ -38,20 +35,17 @@ async def websocket_handler(request):
             async with frame_lock:
                 request.app['video_frames'][client_ip] = frame
 
-            ip_addresses = list(request.app['video_frames'].keys())
-            ip_idx = ip_addresses.index(client_ip)
-
             try:
+                ip_idx = list(request.app['video_frames']).index(client_ip)
                 async with control_lock:
                     command = request.app['control_commands'][ip_idx]
                 await ws.send_str(f"CONTROL:{command[0]}:{command[1]}")
-            except IndexError:
-                print(f"Index {ip_idx} does not exist.")
+            except (IndexError, ValueError):
+                logging.warning(f"No command available for index {ip_idx}")
         elif msg.type == aiohttp.WSMsgType.ERROR:
-            print(f"WebSocket connection closed with exception {ws.exception()}")
+            logging.error(f"WebSocket connection closed with exception {ws.exception()}")
 
     return ws
-
 
 def process_frame_canvas(frames):
     canvas = np.zeros((960, 1280, 3), dtype=np.uint8)
@@ -60,23 +54,18 @@ def process_frame_canvas(frames):
         x_offset = (i % 2) * 640
         y_offset = (i // 2) * 480
         canvas[y_offset:y_offset+480, x_offset:x_offset+640] = resized_frame
-        text_position = (x_offset + 10, y_offset + 30)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.7
-        font_color = (255, 255, 255)
-        thickness = 2
-        cv2.putText(canvas, ip, text_position, font, font_scale, font_color, thickness)
+        cv2.putText(canvas, ip, (x_offset + 10, y_offset + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
     return canvas
 
-async def generate_frames(request):
-    with ProcessPoolExecutor() as pool:
-        while True:
-            async with frame_lock:
-                frames = list(request.app['video_frames'].items())
+async def generate_frames(request, pool):
+    while True:
+        async with frame_lock:
+            frames = list(request.app['video_frames'].items())
+        if frames:
             canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frames)
             _, jpeg_frame = cv2.imencode('.jpg', canvas)
             yield jpeg_frame.tobytes()
-            await asyncio.sleep(1/30)
+        await asyncio.sleep(1/30)
 
 async def stream_video(request):
     try:
@@ -90,33 +79,35 @@ async def stream_video(request):
             }
         )
         await response.prepare(request)
+        pool = request.app['process_pool']
 
-        frame_generator = generate_frames(request)
-
-        async for frame_data in frame_generator:
+        async for frame_data in generate_frames(request, pool):
             await response.write(
                 b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n\r\n'
             )
     except asyncio.CancelledError:
-        print("Streaming was cancelled")
-        return web.Response(text="Stream ended", status=200)
+        logging.info("Streaming was cancelled")
     except Exception as e:
+        logging.error(f"Streaming error: {e}")
         return web.Response(text=f"Error: {e}", status=500)
-
 
 def main():
     logging.basicConfig(level=logging.DEBUG)
-
     app = web.Application()
     app['video_frames'] = {}
     app['control_commands'] = []
+    app['process_pool'] = ProcessPoolExecutor()
+    
     app.router.add_get('/', index)
     app.router.add_get('/video', stream_video)
     app.router.add_get('/ws', websocket_handler)
     app.router.add_static('/static', path='./static', name='static')
-
-    web.run_app(app, host='0.0.0.0', port=8080)
+    
+    try:
+        web.run_app(app, host='0.0.0.0', port=8080)
+    finally:
+        app['process_pool'].shutdown()
 
 if __name__ == "__main__":
     main()
