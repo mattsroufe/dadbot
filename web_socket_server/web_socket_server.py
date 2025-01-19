@@ -8,9 +8,6 @@ import numpy as np
 import json
 from concurrent.futures import ProcessPoolExecutor
 
-frame_lock = asyncio.Lock()
-control_lock = asyncio.Lock()
-
 WINDOW_NAME = "4 Streams Display"
 
 async def index(request):
@@ -26,22 +23,23 @@ async def websocket_handler(request):
             if msg.data == 'close':
                 await ws.close()
             else:
-                async with control_lock:
+                async with request.app['control_lock']:
                     request.app['control_commands'].clear()
                     request.app['control_commands'].extend(json.loads(msg.data))
         elif msg.type == aiohttp.WSMsgType.BINARY:
             frame_array = np.frombuffer(msg.data, dtype=np.uint8)
             frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-            async with frame_lock:
+            async with request.app['frame_lock']:
                 request.app['video_frames'][client_ip] = frame
 
             try:
                 ip_idx = list(request.app['video_frames']).index(client_ip)
-                async with control_lock:
+                async with request.app['control_lock']:
                     command = request.app['control_commands'][ip_idx]
                 await ws.send_str(f"CONTROL:{command[0]}:{command[1]}")
             except (IndexError, ValueError):
-                logging.warning(f"No command available for index {ip_idx}")
+                # logging.warning(f"No command available for index {ip_idx}")
+                pass
         elif msg.type == aiohttp.WSMsgType.ERROR:
             logging.error(f"WebSocket connection closed with exception {ws.exception()}")
 
@@ -59,7 +57,7 @@ def process_frame_canvas(frames):
 
 async def generate_frames(request, pool):
     while True:
-        async with frame_lock:
+        async with request.app['frame_lock']:
             frames = list(request.app['video_frames'].items())
         if frames:
             canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frames)
@@ -98,7 +96,9 @@ def main():
     app['video_frames'] = {}
     app['control_commands'] = []
     app['process_pool'] = ProcessPoolExecutor()
-    
+    app['frame_lock'] = asyncio.Lock()
+    app['control_lock'] = asyncio.Lock()
+
     app.router.add_get('/', index)
     app.router.add_get('/video', stream_video)
     app.router.add_get('/ws', websocket_handler)
