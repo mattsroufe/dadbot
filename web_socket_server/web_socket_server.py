@@ -22,6 +22,12 @@ async def websocket_handler(request):
     await ws.prepare(request)
     client_ip = request.remote
 
+    if client_ip not in request.app['video_frames']:
+        async with request.app['frame_lock']:
+            frame_queue = request.app['video_frames'].setdefault(client_ip, deque(maxlen=5))
+    else:
+        frame_queue = request.app['video_frames'].get(client_ip)
+
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
             if msg.data == 'close':
@@ -33,9 +39,7 @@ async def websocket_handler(request):
         elif msg.type == aiohttp.WSMsgType.BINARY:
             frame_array = np.frombuffer(msg.data, dtype=np.uint8)
             frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-            async with request.app['frame_lock']:
-                frame_queue = request.app['video_frames'].setdefault(client_ip, deque(maxlen=30))
-                frame_queue.append((frame, time()))  # Store frame with timestamp
+            frame_queue.append((frame, time()))  # Store frame with timestamp
 
             try:
                 ip_idx = list(request.app['video_frames']).index(client_ip)
