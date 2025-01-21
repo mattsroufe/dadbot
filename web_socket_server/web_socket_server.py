@@ -133,7 +133,7 @@ def main():
     app = web.Application()
     app['video_frames'] = {}
     app['control_commands'] = []
-    app['process_pool'] = ProcessPoolExecutor()
+    app['process_pool'] = ProcessPoolExecutor(max_workers=4)
     app['frame_lock'] = asyncio.Lock()
     app['control_lock'] = asyncio.Lock()
 
