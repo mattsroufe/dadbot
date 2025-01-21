@@ -2,7 +2,6 @@ import logging
 import aiohttp
 from aiohttp import web
 import asyncio
-import websockets
 import cv2
 import numpy as np
 import json
@@ -11,6 +10,9 @@ from collections import deque
 from time import time
 
 WINDOW_NAME = "4 Streams Display"
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
+FRAME_RATE = 1/30
 
 async def index(request):
     return web.Response(text=open('index.html').read(), content_type='text/html')
@@ -49,17 +51,17 @@ async def websocket_handler(request):
 
 
 def process_frame_canvas(frame_queues):
-    canvas = np.zeros((960, 1280, 3), dtype=np.uint8)
+    canvas = np.zeros((FRAME_HEIGHT * 2, FRAME_WIDTH * 2, 3), dtype=np.uint8)
 
     for i, (ip, frame_queue) in enumerate(frame_queues.items()):
         if not frame_queue:
             continue
 
         frame, _ = frame_queue[-1]  # Use the most recent frame
-        resized_frame = cv2.resize(frame, (640, 480))
-        x_offset = (i % 2) * 640
-        y_offset = (i // 2) * 480
-        canvas[y_offset:y_offset+480, x_offset:x_offset+640] = resized_frame
+        resized_frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
+        x_offset = (i % 2) * FRAME_WIDTH
+        y_offset = (i // 2) * FRAME_HEIGHT
+        canvas[y_offset:y_offset+FRAME_HEIGHT, x_offset:x_offset+FRAME_WIDTH] = resized_frame
 
         # Calculate frame rate using timestamps
         timestamps = [ts for _, ts in frame_queue]
@@ -88,12 +90,12 @@ async def generate_frames(request, pool):
         if frame_queues:
             canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frame_queues)
         else:
-            canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+            canvas = np.zeros((FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
 
         _, jpeg_frame = cv2.imencode('.jpg', canvas)
         yield jpeg_frame.tobytes()
 
-        await asyncio.sleep(1/60)
+        await asyncio.sleep(FRAME_RATE)
 
 
 async def stream_video(request):
