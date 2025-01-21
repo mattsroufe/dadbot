@@ -87,8 +87,12 @@ async def generate_frames(request, pool):
             frame_queues = request.app['video_frames']
         if frame_queues:
             canvas = await asyncio.get_event_loop().run_in_executor(pool, process_frame_canvas, frame_queues)
-            _, jpeg_frame = cv2.imencode('.jpg', canvas)
-            yield jpeg_frame.tobytes()
+        else:
+            canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+
+        _, jpeg_frame = cv2.imencode('.jpg', canvas)
+        yield jpeg_frame.tobytes()
+
         await asyncio.sleep(1/60)
 
 
