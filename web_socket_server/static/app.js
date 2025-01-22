@@ -1,4 +1,5 @@
 const ws = new WebSocket('ws://localhost:8080/ws');
+const GAMEPAD_POLLING_INTERVAL = 30; // ms for polling gamepad status
 
 ws.onmessage = function(event) {
 };
@@ -18,17 +19,17 @@ function updateGamepadInfo() {
 
     // Collect the status of each connected gamepad
     const gamepadData = connectedGamepads.map((gamepad) => {
-        const gamepadInfoContainer = document.getElementById(`gamepad-info-${gamepad.index}`);
-        gamepadInfoContainer.innerHTML = '';
-
 	gamepadAxes = [gamepad.axes[1].toFixed(1), gamepad.axes[2].toFixed(1)];
 	gamepadButtons = gamepad.buttons.map(button => +button.pressed)
 
-	gamepadInfoContainer.innerHTML = `
-	    <h3>${gamepad.id}</h3>
-	    <p>Axes: ${gamepadAxes.join(", ")}</p>
-	    <p>Buttons: ${gamepadButtons.join(", ")}</p>
-	`;
+	requestAnimationFrame(() => {
+            const gamepadInfoContainer = document.getElementById(`gamepad-info-${gamepad.index}`);
+	    gamepadInfoContainer.innerHTML = `
+	        <h3>${gamepad.id}</h3>
+	        <p>Axes: ${gamepadAxes.join(", ")}</p>
+	        <p>Buttons: ${gamepadButtons.join(", ")}</p>
+	    `;
+	});
 
 	const result = [
 	    Math.round(-255 + (gamepad.axes[1] - -1) * (255 - -255) / (1 - -1)),
@@ -38,17 +39,16 @@ function updateGamepadInfo() {
 	return result;
     })
 
-    console.log(JSON.stringify(gamepadData))
+    // console.log(JSON.stringify(gamepadData))
 
     if (ws && ws.readyState === WebSocket.OPEN) {
 	ws.send(JSON.stringify(gamepadData));
     }
 }
 
-// Poll for gamepad status every 100ms
+// Poll for gamepad status every 30ms
 function pollGamepads() {
-    updateGamepadInfo();
-    requestAnimationFrame(pollGamepads);
+    setInterval(updateGamepadInfo, GAMEPAD_POLLING_INTERVAL);
 }
 
 // Start polling when gamepads are connected
