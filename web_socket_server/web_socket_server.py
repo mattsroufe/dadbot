@@ -9,7 +9,6 @@ from concurrent.futures import ProcessPoolExecutor
 from collections import deque
 from time import time
 
-LOCALHOST = '127.0.0.1'
 WINDOW_NAME = "4 Streams Display"
 FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
@@ -22,12 +21,6 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     client_ip = request.remote
-
-    async with request.app['client_lock']:
-        request.app['websockets'][client_ip] = ws
-
-    if client_ip is LOCALHOST:
-        ws.send_json(list(request.app['video_frames'].keys()))
 
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
@@ -45,6 +38,8 @@ async def handle_text_message(msg, request, ws):
     else:
         request.app['control_commands'].clear()
         request.app['control_commands'].update(json.loads(msg.data))
+        await ws.send_json(list(request.app['video_frames'].keys()))
+
 
 async def handle_binary_message(msg, client_ip, request, ws):
     frame_queue = await get_or_create_frame_queue(client_ip, request, ws)
@@ -61,8 +56,6 @@ async def get_or_create_frame_queue(client_ip, request, ws):
         async with request.app['frame_lock']:
             video_frames = request.app['video_frames']
             frame_queue = video_frames.setdefault(client_ip, deque(maxlen=10))
-        if LOCALHOST in request.app['websockets']:
-            await request.app['websockets'][LOCALHOST].send_str(json.dumps(list(video_frames.keys())))
     else:
         frame_queue = request.app['video_frames'].get(client_ip)
     return frame_queue
@@ -157,12 +150,10 @@ async def cleanup(app):
 def main():
     logging.basicConfig(level=logging.DEBUG)
     app = web.Application()
-    app['websockets'] = {}
     app['video_frames'] = {}
     app['control_commands'] = {}
     app['process_pool'] = ProcessPoolExecutor(max_workers=4)
     app['frame_lock'] = asyncio.Lock()
-    app['client_lock'] = asyncio.Lock()
     app['shutdown_event'] = asyncio.Event()
 
     app.router.add_get('/', index)
