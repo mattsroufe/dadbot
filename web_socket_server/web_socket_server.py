@@ -9,7 +9,6 @@ from concurrent.futures import ProcessPoolExecutor
 from collections import deque
 from time import time
 
-WINDOW_NAME = "4 Streams Display"
 FRAME_WIDTH = 320
 FRAME_HEIGHT = 240
 FRAME_RATE = 1/30
@@ -43,9 +42,7 @@ async def handle_text_message(msg, request, ws):
 
 async def handle_binary_message(msg, client_ip, request, ws):
     frame_queue = await get_or_create_frame_queue(client_ip, request, ws)
-    frame_array = np.frombuffer(msg.data, dtype=np.uint8)
-    frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-    frame_queue.append((frame, time()))  # Store frame with timestamp
+    frame_queue.append((msg.data, time()))  # Store frame with timestamp
 
     if client_ip in request.app['control_commands']:
         command = request.app['control_commands'][client_ip]
@@ -91,7 +88,12 @@ def process_frame_canvas(frame_queues):
         if not frame_queue:
             continue
 
-        frame, _ = frame_queue[-1]  # Use the most recent frame
+        compressed_frame, _ = frame_queue[-1]  # Use the most recent compressed frame
+
+        # Decode the frame when need
+        frame_array = np.frombuffer(compressed_frame, dtype=np.uint8)
+        frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+
         # resized_frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
         x_offset, y_offset = get_offsets(i, cols)
         # canvas[y_offset:y_offset+FRAME_HEIGHT, x_offset:x_offset+FRAME_WIDTH] = resized_frame
