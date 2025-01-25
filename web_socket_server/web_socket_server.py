@@ -60,8 +60,30 @@ async def get_or_create_frame_queue(client_ip, request, ws):
         frame_queue = request.app['video_frames'].get(client_ip)
     return frame_queue
 
+def calculate_grid_dimensions(num_clients):
+    """
+    Calculate the number of rows and columns for the grid based on the number of clients.
+    The grid is as square as possible.
+    """
+    cols = int(np.ceil(np.sqrt(num_clients)))
+    rows = int(np.ceil(num_clients / cols))
+    return rows, cols
+
 def process_frame_canvas(frame_queues):
-    canvas = np.zeros((FRAME_HEIGHT * 2, FRAME_WIDTH * 2, 3), dtype=np.uint8)
+    """
+    Dynamically create a canvas and arrange video streams in a grid.
+    """
+    num_clients = len(frame_queues)
+    if num_clients == 0:
+        return np.zeros((FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
+
+    # Calculate rows and columns
+    rows, cols = calculate_grid_dimensions(num_clients)
+
+    # Create a canvas based on dynamic grid dimensions
+    canvas_height = FRAME_HEIGHT * rows
+    canvas_width = FRAME_WIDTH * cols
+    canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
 
     frame_rates = {}
 
@@ -71,7 +93,7 @@ def process_frame_canvas(frame_queues):
 
         frame, _ = frame_queue[-1]  # Use the most recent frame
         # resized_frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
-        x_offset, y_offset = get_offsets(i)
+        x_offset, y_offset = get_offsets(i, cols)
         # canvas[y_offset:y_offset+FRAME_HEIGHT, x_offset:x_offset+FRAME_WIDTH] = resized_frame
         canvas[y_offset:y_offset+FRAME_HEIGHT, x_offset:x_offset+FRAME_WIDTH] = frame
 
@@ -83,9 +105,12 @@ def process_frame_canvas(frame_queues):
     logging.info(frame_rates)
     return canvas
 
-def get_offsets(index):
-    x_offset = (index % 2) * FRAME_WIDTH
-    y_offset = (index // 2) * FRAME_HEIGHT
+def get_offsets(index, cols):
+    """
+    Get the x and y offsets for placing a frame on the canvas based on index and number of columns.
+    """
+    x_offset = (index % cols) * FRAME_WIDTH
+    y_offset = (index // cols) * FRAME_HEIGHT
     return x_offset, y_offset
 
 def add_text_to_canvas(canvas, ip, x_offset, y_offset, frame_queue):
